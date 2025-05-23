@@ -91,7 +91,8 @@ public class BloodVesselUIManager : MonoBehaviour
     void OnStopSimulationClicked()
     {
         if (nanobotSimulation != null)
-        {n            nanobotSimulation.ResetSimulation();
+        {
+            nanobotSimulation.ResetSimulation();
         }
     }
     
@@ -99,7 +100,8 @@ public class BloodVesselUIManager : MonoBehaviour
     void OnManualPathClicked()
     {
         if (nanobotSimulation != null)
-        {n            nanobotSimulation.ToggleManualPathMode();
+        {
+            nanobotSimulation.ToggleManualPathMode();
             UpdatePathModeText();
         }
     }
@@ -107,7 +109,8 @@ public class BloodVesselUIManager : MonoBehaviour
     void OnClearPathClicked()
     {
         if (nanobotSimulation != null)
-        {n            nanobotSimulation.ClearManualPath();
+        {
+            nanobotSimulation.ClearManualPath();
         }
     }
     
@@ -115,7 +118,8 @@ public class BloodVesselUIManager : MonoBehaviour
     void UpdatePathModeText()
     {
         if (pathModeText != null && nanobotSimulation != null)
-        {n            if (nanobotSimulation.IsInManualPathMode())
+        {
+            if (nanobotSimulation.IsInManualPathMode())
                 pathModeText.text = "حالت انتخاب مسیر: فعال";
             else
                 pathModeText.text = "حالت انتخاب مسیر: غیرفعال";

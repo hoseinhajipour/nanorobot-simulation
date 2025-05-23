@@ -22,3 +22,13 @@ This project simulates the movement and behavior of nanobots within a blood vess
 *   Fixed issues related to nanobot freezing after one finds the target by improving path sharing logic in `NanobotSimulation.cs`.
 *   Added the `HasReachedTarget` method to `NanobotBehavior.cs` for proper status checks.
 
+## Planned Nanobot Actions:
+
+We are currently working on adding advanced capabilities to the nanobots, which will include:
+
+*   **Artery Modification:** Nanobots will be able to remove, repair, and create new artery segments.
+*   **Medication Delivery:** Nanobots will be able to deliver medication to specific target locations within the blood vessel network.
+*   **Tissue Creation:** Nanobots will have the ability to create various types of tissue, such as flesh, fat, hair, and teeth.
+
+These features are being implemented in the `NanobotActionManager.cs` script and integrated into the UI via `BloodVesselUIManager.cs`.
+
