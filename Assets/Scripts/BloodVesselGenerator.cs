@@ -12,13 +12,50 @@ public class BloodVesselGenerator : MonoBehaviour
 
     private List<GameObject> vessels = new List<GameObject>();
 
-    private class Node
+    public class Node // Changed from private to public
     {
         public Vector3 position;
-        public Node(Vector3 pos) { position = pos; }
+        public Dictionary<Node, float> neighbors;
+        public float gCost;
+        public float hCost;
+        public Node parent;
+
+        public Node(Vector3 pos)
+        {
+            position = pos;
+            neighbors = new Dictionary<Node, float>();
+            gCost = float.MaxValue;
+            hCost = float.MaxValue;
+            parent = null;
+        }
     }
 
     private List<Node> nodes = new List<Node>();
+
+    public List<Node> GetVesselGraph()
+    {
+        return nodes;
+    }
+
+    public Node GetClosestNode(Vector3 point)
+    {
+        if (nodes == null || nodes.Count == 0)
+            return null;
+
+        Node closestNode = null;
+        float minDistance = float.MaxValue;
+
+        foreach (Node node in nodes)
+        {
+            float distance = Vector3.Distance(node.position, point);
+            if (distance < minDistance)
+            {
+                minDistance = distance;
+                closestNode = node;
+            }
+        }
+        return closestNode;
+    }
 
     public void CreateVessels()
     {
@@ -50,11 +87,22 @@ public class BloodVesselGenerator : MonoBehaviour
             Node endNode = new Node(endPos);
             nodes.Add(endNode);
 
+            // Populate Adjacency Lists
+            float distance = Vector3.Distance(startNode.position, endNode.position);
+            if (!startNode.neighbors.ContainsKey(endNode))
+            {
+                startNode.neighbors.Add(endNode, distance);
+            }
+            if (!endNode.neighbors.ContainsKey(startNode))
+            {
+                endNode.neighbors.Add(startNode, distance);
+            }
+
             // ساخت رگ بین startNode و endNode
             GameObject vessel = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             vessel.transform.position = (startNode.position + endNode.position) / 2;
             vessel.transform.up = (endNode.position - startNode.position).normalized;
-            vessel.transform.localScale = new Vector3(vesselRadius, (endNode.position - startNode.position).magnitude / 2, vesselRadius);
+            vessel.transform.localScale = new Vector3(vesselRadius, distance / 2, vesselRadius);
 
             if (vesselMaterial != null)
                 vessel.GetComponent<Renderer>().material = vesselMaterial;
