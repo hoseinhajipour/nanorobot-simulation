@@ -18,10 +18,6 @@ public class NanobotSimulation : MonoBehaviour
     private Vector3 targetPoint;
     private bool simulationRunning = false;
     private int nanobotsReachedTarget = 0;
-
-    // A* Pathfinding
-    public BloodVesselGenerator bloodVesselGenerator; // Assign in Editor or find
-    private List<Vector3> masterOptimalPath = new List<Vector3>();
     
     // نانوبات‌هایی که هدف را پیدا کرده‌اند
     private List<GameObject> informedNanobots = new List<GameObject>();
@@ -72,21 +68,7 @@ public class NanobotSimulation : MonoBehaviour
     
     public void StartSimulation()
     {
-        if (selector == null)
-        {
-            Debug.LogError("Selector is not assigned in NanobotSimulation.");
-            return;
-        }
-
-        if (bloodVesselGenerator == null)
-        {
-            bloodVesselGenerator = FindObjectOfType<BloodVesselGenerator>();
-            if (bloodVesselGenerator == null)
-            {
-                Debug.LogError("BloodVesselGenerator not found in scene or assigned.");
-                return;
-            }
-        }
+        if (selector == null) return;
         
         // دریافت نقاط تزریق و هدف
         injectionPoint = GetInjectionPoint();
@@ -96,67 +78,6 @@ public class NanobotSimulation : MonoBehaviour
         {
             Debug.LogWarning("نقاط تزریق یا هدف تنظیم نشده‌اند!");
             return;
-        }
-
-        masterOptimalPath.Clear();
-        List<BloodVesselGenerator.Node> vesselGraph = bloodVesselGenerator.GetVesselGraph();
-
-        if (vesselGraph == null || vesselGraph.Count == 0)
-        {
-            Debug.LogWarning("Vessel graph is empty. A* pathfinding cannot proceed.");
-        }
-        else
-        {
-            BloodVesselGenerator.Node startNode = bloodVesselGenerator.GetClosestNode(injectionPoint);
-            BloodVesselGenerator.Node targetNode = bloodVesselGenerator.GetClosestNode(targetPoint);
-
-            if (startNode == null || targetNode == null)
-            {
-                Debug.LogError("Start or target node for A* not found. Ensure vessels are generated and points are within reach.");
-            }
-            else
-            {
-                List<BloodVesselGenerator.Node> nodePath = AStarPathfinder.FindPath(startNode, targetNode);
-                if (nodePath != null && nodePath.Count > 0)
-                {
-                    foreach (BloodVesselGenerator.Node node in nodePath)
-                    {
-                        masterOptimalPath.Add(node.position);
-                    }
-                    // Log masterOptimalPath details
-                    if (masterOptimalPath.Count > 0)
-                    {
-                        string pathLog = $"Successfully calculated A* path with {masterOptimalPath.Count} points.\n";
-                        if (masterOptimalPath.Count <= 10)
-                        {
-                            for(int i=0; i < masterOptimalPath.Count; i++) pathLog += $"P{i}: {masterOptimalPath[i]}\n";
-                        }
-                        else
-                        {
-                            for(int i=0; i < 5; i++) pathLog += $"P{i}: {masterOptimalPath[i]}\n";
-                            pathLog += "...\n";
-                            for(int i=masterOptimalPath.Count - 5; i < masterOptimalPath.Count; i++) pathLog += $"P{i}: {masterOptimalPath[i]}\n";
-                        }
-                        Debug.Log(pathLog);
-                    }
-                    else
-                    {
-                         Debug.LogWarning("A* pathfinding returned an empty path.");
-                    }
-                }
-                else
-                {
-                    Debug.LogWarning("A* pathfinding failed to find a path (AStarPathfinder.FindPath returned null). Nanobots may revert to old behavior or fail.");
-                }
-            }
-            else // Added specific logging for null start/target nodes
-            {
-                Debug.LogError("A* pathfinding failed: startNode or targetNode is null. Cannot calculate path.");
-            }
-        }
-        else // Added specific logging for empty graph
-        {
-            Debug.LogWarning("A* pathfinding cannot proceed: Blood vessel graph is empty or not available.");
         }
         
         // پاکسازی نانوبات‌های قبلی
@@ -178,17 +99,10 @@ public class NanobotSimulation : MonoBehaviour
             behavior.moveSpeed = moveSpeed;
             behavior.randomMovementRange = randomMovementRange;
             
-            if (masterOptimalPath.Count > 0)
-            {
-                behavior.LearnPathFromOther(new List<Vector3>(masterOptimalPath)); // Give a copy
-                behavior.SetInformed(true); // Make them informed to follow the path
-                Debug.Log($"Nanobot {nanobot.name} received masterOptimalPath with {masterOptimalPath.Count} points.");
-            }
-            else if (manualPath.Count > 0) // Fallback to manual path if A* failed but manual exists
+            // اگر مسیر دستی تعریف شده باشد، آن را به نانوبات بده
+            if (manualPath.Count > 0)
             {
                 behavior.LearnPathFromOther(manualPath);
-                Debug.Log($"Nanobot {nanobot.name} received manualPath with {manualPath.Count} points as A* path was not available.");
-                behavior.SetInformed(true);
             }
             
             nanobots.Add(nanobot);
@@ -196,7 +110,7 @@ public class NanobotSimulation : MonoBehaviour
         
         simulationRunning = true;
         nanobotsReachedTarget = 0;
-        informedNanobots.Clear(); // Cleared in ResetSimulation, but good to be explicit
+        informedNanobots.Clear();
         
         // شروع کورتین برای بررسی ارتباط بین نانوبات‌ها
         StartCoroutine(CommunicationCheck());
@@ -315,7 +229,6 @@ public class NanobotSimulation : MonoBehaviour
                         if (behavior != null)
                         {
                             behavior.SetInformed(true);
-                            ShareMasterOptimalPathWithNanobot(behavior); // Share A* path
                             newInformedNanobots.Add(nanobot);
                         }
                     }
@@ -323,9 +236,7 @@ public class NanobotSimulation : MonoBehaviour
             }
             
             // اضافه کردن نانوبات‌های جدید آگاه شده به لیست اصلی
-            // informedNanobots.AddRange(newInformedNanobots); // Already added to informedNanobots if SetInformed is true and they reach target. This might be redundant or handled by NanobotReachedTarget.
-            // For now, newInformedNanobots ensures we don't try to inform them multiple times within one CommunicationCheck cycle.
-            // The main `informedNanobots` list is populated by `NanobotReachedTarget`.
+            informedNanobots.AddRange(newInformedNanobots);
 
             
             yield return new WaitForSeconds(0.5f); // بررسی هر نیم ثانیه
@@ -335,65 +246,42 @@ public class NanobotSimulation : MonoBehaviour
     // اعلام رسیدن یک نانوبات به هدف
     public void NanobotReachedTarget(GameObject nanobot)
     {
-        // Check if it's already in informedNanobots to prevent processing multiple times
-        // NanobotBehavior's SetInformed might be a better place to add to this list,
-        // but this method is specifically for "reached target".
         if (!informedNanobots.Contains(nanobot))
         {
-            informedNanobots.Add(nanobot); // Add to general informed list
+            informedNanobots.Add(nanobot);
             nanobotsReachedTarget++;
             Debug.Log($"نانوبات {nanobot.name} به هدف رسید! تعداد کل: {nanobotsReachedTarget} از {nanobotCount}");
-
-            // Path sharing from individual nanobots is now less critical due to A*
-            // NanobotBehavior behavior = nanobot.GetComponent<NanobotBehavior>();
-            // if (behavior != null)
-            // {
-            //     List<Vector3> successfulPath = behavior.GetLearnedPath();
-            //     if (successfulPath.Count > 0 && masterOptimalPath.Count == 0) // Only share if A* failed
-            //     {
-            //         SharePathWithUninformedNanobots(successfulPath);
-            //     }
-            // }
+            
+            // دریافت مسیر از نانوباتی که به هدف رسیده
+            NanobotBehavior behavior = nanobot.GetComponent<NanobotBehavior>();
+            if (behavior != null)
+            {
+                List<Vector3> successfulPath = behavior.GetLearnedPath();
+                if (successfulPath.Count > 0)
+                {
+                    // انتشار مسیر به سایر نانوبات‌ها
+                    SharePathWithOtherNanobots(successfulPath);
+                }
+            }
         }
     }
     
-    // Renamed and repurposed for master A* path or a given path if A* failed
-    private void ShareMasterOptimalPathWithNanobot(NanobotBehavior behavior)
+    // انتشار مسیر به سایر نانوبات‌ها
+    private void SharePathWithOtherNanobots(List<Vector3> path)
     {
-        if (masterOptimalPath.Count > 0 && behavior != null && !behavior.HasLearnedPath() && !behavior.HasReachedTarget())
+        foreach (GameObject nanobot in nanobots)
         {
-            behavior.LearnPathFromOther(new List<Vector3>(masterOptimalPath)); // Give a copy
-            behavior.SetInformed(true); // Ensure it's marked as informed
-        }
-        // Optional: Fallback to manual path if A* path is not available
-        else if (manualPath.Count > 0 && behavior != null && !behavior.HasLearnedPath() && !behavior.HasReachedTarget())
-        {
-             behavior.LearnPathFromOther(new List<Vector3>(manualPath));
-             behavior.SetInformed(true);
-        }
-    }
-
-    // This method can be used if we need to propagate a path other than masterOptimalPath,
-    // for example, if A* fails and a nanobot finds a path via random exploration.
-    // For now, the primary mechanism is A* path distribution.
-    private void SharePathWithUninformedNanobots(List<Vector3> path)
-    {
-        if (path == null || path.Count == 0) return;
-
-        int sharedCount = 0;
-        foreach (GameObject nb in nanobots)
-        {
-            if (nb == null) continue;
-            NanobotBehavior behavior = nb.GetComponent<NanobotBehavior>();
+            // بررسی می‌کنیم که نانوبات به هدف نرسیده باشد
+            NanobotBehavior behavior = nanobot.GetComponent<NanobotBehavior>();
             if (behavior != null && !behavior.HasLearnedPath() && !behavior.HasReachedTarget())
             {
-                behavior.LearnPathFromOther(new List<Vector3>(path)); // Give a copy
+                behavior.LearnPathFromOther(path);
+                // نانوبات را آگاه می‌کنیم
                 behavior.SetInformed(true);
-                sharedCount++;
             }
         }
-        if(sharedCount > 0)
-            Debug.Log($"Shared a path with {sharedCount} uninformed nanobots.");
+        
+        Debug.Log("مسیر موفق به همه نانوبات‌ها منتقل شد!");
     }
     
     // دریافت نقطه تزریق از سلکتور
