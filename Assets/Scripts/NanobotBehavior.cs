@@ -97,12 +97,11 @@ public class NanobotBehavior : MonoBehaviour
             transform.position = newPosition;
             lastValidPosition = newPosition;
             
-            // Path recording is removed here as A* path is now provided externally
-            // and should not be modified by individual nanobot's movement attempts.
-            // if (pathMemory.Count == 0 || Vector3.Distance(pathMemory[pathMemory.Count - 1], transform.position) > 0.5f)
-            // {
-            //     pathMemory.Add(transform.position);
-            // }
+            // ذخیره نقطه در حافظه مسیر (هر 0.5 واحد یک نقطه)
+            if (pathMemory.Count == 0 || Vector3.Distance(pathMemory[pathMemory.Count - 1], transform.position) > 0.5f)
+            {
+                pathMemory.Add(transform.position);
+            }
         }
         else
         {
@@ -143,19 +142,6 @@ public class NanobotBehavior : MonoBehaviour
         if (Vector3.Distance(transform.position, pathMemory[currentPathIndex]) < 0.2f)
         {
             currentPathIndex++;
-            if (currentPathIndex < pathMemory.Count)
-            {
-                Debug.Log($"Nanobot {gameObject.name} reached path point. Next target: {pathMemory[currentPathIndex]} at index {currentPathIndex}. Current Pos: {transform.position}");
-            }
-            else
-            {
-                Debug.Log($"Nanobot {gameObject.name} reached end of its path memory. Current Pos: {transform.position}");
-            }
-        }
-        // Log current movement state periodically (e.g. every 30th frame, approx every 0.5s)
-        else if (Time.frameCount % 30 == 0 && currentPathIndex < pathMemory.Count) 
-        {
-            Debug.Log($"Nanobot {gameObject.name} moving towards {pathMemory[currentPathIndex]} (idx {currentPathIndex}). Current Pos: {transform.position}");
         }
     }
     
@@ -275,11 +261,6 @@ public class NanobotBehavior : MonoBehaviour
         if (simulation != null)
         {
             simulation.NanobotReachedTarget(gameObject);
-            Debug.Log($"Nanobot {gameObject.name} reached targetPoint: {targetPoint} at Time: {Time.timeSinceLevelLoad}.");
-        }
-        else
-        {
-            Debug.LogWarning($"Nanobot {gameObject.name} reached targetPoint: {targetPoint} but simulation reference is null.");
         }
     }
     
